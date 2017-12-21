@@ -22,8 +22,8 @@ Creates an object ready to pair with a physical device
 ```
 	device.read()
 ```
-Prompts the user to attach the device, pairs, and reads mouse 
-movement data.
+Prompts the user to attach the device, pairs with the device, 
+and reads mouse movement data.
 			  
 ###	Example:
 ``` 

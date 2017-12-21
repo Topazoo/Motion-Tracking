@@ -16,14 +16,14 @@ https://github.com/pyusb/pyusb
 ```
 	device = USB_Device()
 ```
-	Creates an object ready to pair with a physical device
+Creates an object ready to pair with a physical device
 
 ###	Reading Data:
 ```
 	device.read()
 ```
-	Prompts the user to attach the device, pairs, and reads mouse 
-	movement data.
+Prompts the user to attach the device, pairs, and reads mouse 
+movement data.
 			  
 ###	Example:
 ``` 

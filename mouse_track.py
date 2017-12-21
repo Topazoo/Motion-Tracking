@@ -13,6 +13,7 @@
 import sys
 import usb.core
 import usb.util
+from collections import Counter
 
 class USB_Device(object):
     ''' USB Device object that holds information needed
@@ -74,7 +75,7 @@ class USB_Device(object):
             all_ids[0].append(int(cfg.idVendor))
             all_ids[1].append(int(cfg.idProduct))
 
-        raw_input("Please reattach the USB device and press Enter >>> ")
+        raw_input("Please attach the USB device and press Enter >>> ")
 
         # Store a second list of all attached vendor and product IDs
         devices = usb.core.find(find_all=True)
@@ -84,8 +85,8 @@ class USB_Device(object):
             with_attach[1].append(int(cfg.idProduct))
 
         # The difference of the lists is the removed device
-        final.append(list(set(with_attach[0]) - set(all_ids[0])))
-        final.append(list(set(with_attach[1]) - set(all_ids[1])))
+        final.append(list((Counter(with_attach[0]) - Counter(all_ids[0])).elements()))
+        final.append(list((Counter(with_attach[1]) - Counter(all_ids[1])).elements()))
 
         # Verify results
         result = self.verify_device(final)
@@ -98,7 +99,7 @@ class USB_Device(object):
         if(len(final[0]) > 1 or len(final[1]) > 1):
             raw_input("Multiple devices connected. Press Enter to restart >>> ")
             return self.find_device()
-        elif(len(final[0]) < 1 or len(final[1]) < 1):
+        elif(len(final[0]) < 1 and len(final[1]) < 1):
             raw_input("No device detected. Press Enter to restart >>> ")
             return self.find_device()
         elif(len(final[0]) != len(final[1])):

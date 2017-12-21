@@ -1,15 +1,15 @@
-# Object to Read Optical Mouse Movements
+# Class to Read Optical Mouse Movements
 
 ## Overview:
-	The USB_Device object allows the the user to read data from an
-	physically attached USB device. 
+The USB_Device class allows the the user to read data from a
+physically attached USB device. 
 
 ## Requirements:
 ###	Python 2.7
-	https://www.python.org/download/releases/2.7/
+https://www.python.org/download/releases/2.7/
 
 ###	pyusb
-	https://github.com/pyusb/pyusb
+https://github.com/pyusb/pyusb
 
 ## Functionality:
 ### 	Creation: 

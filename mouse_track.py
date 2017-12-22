@@ -29,7 +29,6 @@ class USB_Device(object):
 
         # Set and update class variables
         self.interface = USB_Device.curr_devices
-        USB_Device.curr_devices += 1
 
         # Create instance variables
         self.prod_id = -1
@@ -56,6 +55,8 @@ class USB_Device(object):
            self.vendor == -1):
            print("No device attached!")
            return -1
+
+        USB_Device.curr_devices += 1
         
         print("Device " + str(self.prod_id) + " attached!")
 
@@ -144,8 +145,6 @@ class USB_Device(object):
 
             except KeyboardInterrupt:
                 print("Keyboard interrupt during data read")
-                print("Releasing device to kernel")
-                self.release()
                 break
 
     def release(self):
@@ -160,6 +159,13 @@ class USB_Device(object):
         
         if(self.device.is_kernel_driver_active(self.interface)) is False:
             self.device.attach_kernel_driver(self.interface)
+
+        self.device = -1
+        self.endpoint = -1
+        self.vendor = -1
+        self.prod_id = -1
+
+        USB_Device.curr_devices -= 1
 
     def get_info(self):
         ''' Return device info '''

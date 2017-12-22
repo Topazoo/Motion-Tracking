@@ -11,6 +11,8 @@ https://www.python.org/download/releases/2.7/
 ###	pyusb
 https://github.com/pyusb/pyusb
 
+###	Superuser Privileges
+
 ## Functionality:
 ### 	Creation: 
 ```
@@ -18,7 +20,7 @@ https://github.com/pyusb/pyusb
 ```
 Creates an object ready to pair with a physical device
 
-###	Attaching a Device
+###	Attaching a Device:
 ```
 	device.attach()
 ```
@@ -29,13 +31,14 @@ script has taken control of the device from the kernel
 ```
 	device.read()
 ```
-Reads mouse movements
+Reads mouse movements. Can be halted with a keyboard interrupt.
+The interupt will not automatically release the device.
 
-###	Releasing the Device
+###	Releasing the Device:
 ```
 	device.release()
 ```
-Gives control of the device back to the kernel
+Gives control of the device back to the kernel. 
 			  
 ###	Example:
 ``` 

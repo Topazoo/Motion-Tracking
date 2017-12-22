@@ -40,7 +40,7 @@ class USB_Device(object):
         # Store device so all devices can be accessed with one object
         USB_Device.list_devices.append(self)
 
-    def read(self):
+    def attach(self):
         ''' Take control of the device and read data '''
 
         # Find the device to attach to
@@ -52,11 +52,12 @@ class USB_Device(object):
         # Take control from the kernel
         self.claim_device()
 
-        # Read device
-        self.read_device()
-
-        # Release control
-        self.release_device()
+        if(self.prod_id == -1 or self.device == -1 or self.endpoint == -1 or
+           self.vendor == -1):
+           print("No device attached!")
+           return -1
+        
+        print("Device " + str(self.prod_id) + " attached!")
 
     def find_device(self):
         ''' Find a USB device '''
@@ -121,8 +122,13 @@ class USB_Device(object):
         # Claim the device
         usb.util.claim_interface(self.device, self.interface)
 
-    def read_device(self):
+    def read(self):
         ''' Read data drom the device'''
+
+        if(self.prod_id == -1 or self.device == -1 or self.endpoint == -1 or
+           self.vendor == -1):
+           print("No device attached!")
+           return -1
 
         data_list = []
 
@@ -132,21 +138,28 @@ class USB_Device(object):
                                              self.endpoint.wMaxPacketSize).tolist()
                 print(data_list)
 
-            except KeyboardInterrupt:
-                print("Keyboard interrupt during data read")
-                print("Releasing device to kernel and exiting...")
-                self.release_device()
-                sys.exit(0)
-
             except usb.core.USBError as error:
                 if error.args == ('Operation timed out',):
                     continue
 
-    def release_device(self):
+            except KeyboardInterrupt:
+                print("Keyboard interrupt during data read")
+                print("Releasing device to kernel")
+                self.release()
+                break
+
+    def release(self):
         ''' Release the device to the kernel '''
 
+        if(self.prod_id == -1 or self.device == -1 or self.endpoint == -1 or
+           self.vendor == -1):
+           print("No device attached!")
+           return -1
+
         usb.util.release_interface(self.device, self.interface)
-        self.device.attach_kernel_driver(self.interface)
+        
+        if(self.device.is_kernel_driver_active(self.interface)) is False:
+            self.device.attach_kernel_driver(self.interface)
 
     def get_info(self):
         ''' Return device info '''
@@ -157,6 +170,7 @@ def main():
     ''' Main driver '''
 
     device = USB_Device()
+    device.attach()
     device.read()
 
 if __name__ == "__main__":

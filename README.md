@@ -18,21 +18,35 @@ https://github.com/pyusb/pyusb
 ```
 Creates an object ready to pair with a physical device
 
+###	Attaching a Device
+```
+	device.attach()
+```
+Prompts the user to attach the device and verifies the
+script has taken control of the device from the kernel
+
 ###	Reading Data:
 ```
 	device.read()
 ```
-Prompts the user to attach the device, pairs with the device, 
-and reads mouse movement data.
+Reads mouse movements
+
+###	Releasing the Device
+```
+	device.release()
+```
+Gives control of the device back to the kernel
 			  
 ###	Example:
 ``` 
 sudo python 
 >>> from mouse_track import USB_Device
 >>> device = USB_Device()
->>> device.read()
+>>> device.attach()
 Ensure the USB device you want to track is detached and press Enter >>>
 Please reattach the USB device and press Enter >>>
+Device 2361 attached!
+>>> device.read()
 [0, 255, 0, 0]
 [0, 255, 1, 0]
 [0, 1, 0, 0]

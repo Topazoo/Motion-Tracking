@@ -160,12 +160,16 @@ class USB_Device(object):
         if(self.device.is_kernel_driver_active(self.interface)) is False:
             self.device.attach_kernel_driver(self.interface)
 
+        print("Device " + str(self.prod_id) + " released!")
+
         self.device = -1
         self.endpoint = -1
         self.vendor = -1
         self.prod_id = -1
 
         USB_Device.curr_devices -= 1
+
+
 
     def get_info(self):
         ''' Return device info '''

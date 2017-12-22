@@ -55,6 +55,9 @@ Device 2361 attached!
 [0, 1, 0, 0]
 [0, 1, 255, 0]
 ...
+>>> device.release()
+Device 2361 released!
+
 ```
 
 ## Interpreting Data

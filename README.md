@@ -121,8 +121,8 @@ Device 0 released!
 ```
 
 ## More Examples Can Be Found In:
-single_mouse_example.py
-multi_mouse_example.py
+* single_mouse_example.py
+* multi_mouse_example.py
 
 ## Known Issues:
 ### Errno 16/19 on Attachment:

@@ -39,9 +39,9 @@ is detected.
 Returns 0 for a successful read and -1 for failure.
 
 Parameters: 
-*	label: labels the data with the device it was read from.
--    		0 - Default. Data is unlabeled.
--			1 - Data is labeled.
+* label: labels the data with the device it was read from.
+	* 0 - Default. Data is unlabeled.
+	* 1 - Data is labeled.
 
 ### Reading Data From Multiple Devices:
 ```
@@ -53,11 +53,10 @@ Reads concurrent mouse movements from a list of devices.
 Returns 0 for a successful read and -1 for failure.
 
 Parameters: 
-*	[devices]:	A list of USB_Mouse objects connected to 
-				physical devices.
-*	label:		Labels the data with the device it was read from.
--    			0 - Default. Data is unlabeled.
--	   			1 - Data is labeled.
+* [devices]: A list of USB_Mouse objects connected to physical devices.
+* label: Labels the data with the device it was read from.
+	* 0 - Default. Data is unlabeled.
+	* 1 - Data is labeled.
 
 ```
 	device.read_all()
@@ -71,9 +70,9 @@ physical device).
 Returns 0 for a successful read and -1 for failure.
 
 Parameters: 
-*	label: labels the data with the device it was read from.
--    	0 - Default. Data is unlabeled.
--		1 - Data is labeled.
+* label: labels the data with the device it was read from.
+	* 0 - Default. Data is unlabeled.
+	* 1 - Data is labeled.
 
 ###	Releasing the Device:
 ```

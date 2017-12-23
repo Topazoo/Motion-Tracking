@@ -44,6 +44,7 @@ Parameters:
 	* 1 - Data is labeled.
 
 ### Reading Data From Multiple Devices:
+#### Some Devices:
 ```
 	device.read_multiple([devices]) 
 					
@@ -57,6 +58,8 @@ Parameters:
 * label: Labels the data with the device it was read from.
 	* 0 - Default. Data is unlabeled.
 	* 1 - Data is labeled.
+
+#### All Devices:
 
 ```
 	device.read_all()

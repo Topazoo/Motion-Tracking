@@ -30,47 +30,50 @@ Returns 0 for successful attachment and -1 for failure.
 
 ###	Reading Data From a Single Device:
 ```
-	device.read() or device.read(label=1)
+	device.read()
+
+	device.read(label=1)
 ```
 Reads mouse movements until a keyboard interrupt (CTRL+C)
 is detected.
 Returns 0 for a successful read and -1 for failure.
 
 Parameters: 
-label: labels the data with the device it was read from.
-       0 - Default. Data is unlabeled.
-	   1 - Data is labeled.
+*	label: labels the data with the device it was read from.
+-    		0 - Default. Data is unlabeled.
+-			1 - Data is labeled.
 
 ### Reading Data From Multiple Devices:
 ```
 	device.read_multiple([devices]) 
-					or
+					
 	device.read_multiple([devices], label=1)
 ```
 Reads concurrent mouse movements from a list of devices.
 Returns 0 for a successful read and -1 for failure.
 
 Parameters: 
-[devices]: 	A list of USB_Mouse objects connected to 
-		   	physical devices.
-label: 		Labels the data with the device it was read from.
-       		0 - Default. Data is unlabeled.
-	   		1 - Data is labeled.
+*	[devices]:	A list of USB_Mouse objects connected to 
+				physical devices.
+*	label:		Labels the data with the device it was read from.
+-    			0 - Default. Data is unlabeled.
+-	   			1 - Data is labeled.
 
 ```
-	device.read_all() or device.read_all(label=1)
+	device.read_all()
+	
+	device.read_all(label=1)
 ```
 Reads concurrent mouse movement from all USB_Mouse objects that
 are connected to a physical device. This method may be invoked 
 through any USB_Mouse object (even if it is not connected to a
 physical device).
-
 Returns 0 for a successful read and -1 for failure.
 
 Parameters: 
-label: labels the data with the device it was read from.
-       0 - Default. Data is unlabeled.
-	   1 - Data is labeled.
+*	label: labels the data with the device it was read from.
+-    	0 - Default. Data is unlabeled.
+-		1 - Data is labeled.
 
 ###	Releasing the Device:
 ```

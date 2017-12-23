@@ -12,6 +12,8 @@ https://www.python.org/download/releases/2.7/
 https://github.com/pyusb/pyusb
 
 ###	Superuser Privileges
+Run all scripts with "sudo" or an equivalent
+command to elevate privileges. 
 
 ## Methods:
 ### 	Creation: 

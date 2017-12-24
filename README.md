@@ -52,7 +52,8 @@ Parameters:
 					
 	device.read_multiple([devices], label=1)
 ```
-Reads concurrent mouse movements from a list of devices.
+Reads concurrent mouse movements from a list of devices
+until a keyboard interrupt (CTRL+C) is detected.
 Returns 0 for a successful read and -1 for failure.
 
 Parameters: 
@@ -69,9 +70,9 @@ Parameters:
 	device.read_all(label=1)
 ```
 Reads concurrent mouse movement from all USB_Mouse objects that
-are connected to a physical device. This method may be invoked 
-through any USB_Mouse object (even if it is not connected to a
-physical device).
+are connected to a physical device until a keyboard interrupt (CTRL+C)
+is detected. This method may be invoked through any USB_Mouse object 
+(even if it is not connected to a physical device).
 Returns 0 for a successful read and -1 for failure.
 
 Parameters: 
@@ -131,10 +132,6 @@ Device 0 released!
 Usually this occurs if the Enter key is pressed too quickly after a
 mouse is attached. Ensure the mouse has been given enough time to 
 be fully detected by the operating system.
-
-### Concurrency Keyboard Interrupts:
-Currently there is no way to interrupt concurrent threads with a keyboard interrupt.
-Concurrent reads require a forced exit. This will be fixed in the very near future.
 
 ## Interpreting Data:
 ### Information for interpreting gathered data can be found at:

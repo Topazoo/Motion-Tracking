@@ -14,9 +14,10 @@
     https://stackoverflow.com/questions/21731043/use-of-input-raw-input-in-python-2-and-3 '''
 
 from collections import Counter
-from threading import Thread
+from threading import Thread, Event
 import usb.core
 import usb.util
+import time
 
 class USB_Mouse(object):
     ''' Read USB Mouse tracking data '''
@@ -94,7 +95,8 @@ class USB_Mouse(object):
             with_attach[0].append(int(cfg.idVendor))
             with_attach[1].append(int(cfg.idProduct))
 
-        # The difference of the lists is the removed device
+        # The difference of the lists is the attached device
+        # Counter allows for multiple mice with the same IDs to be detected
         final.append(list((Counter(with_attach[0]) - Counter(all_ids[0])).elements()))
         final.append(list((Counter(with_attach[1]) - Counter(all_ids[1])).elements()))
 
@@ -179,17 +181,35 @@ class USB_Mouse(object):
                     continue
 
             except KeyboardInterrupt:
-                print("Keyboard interrupt during data read")
+                print("Read interrupted by user. Exiting.")
                 return 0
 
-    def threaded_read(self, label=0):
-        ''' Thread wrapper for read() '''
+    def threaded_read(self, event, label=0):
+        ''' Read data from devices until signaled '''
 
-        # Run a thread of this object's read() function
-        thread = Thread(target=self.read, args=(label,))
-        thread.start()
+        # Check for connected device
+        if(self.prod_id == -1 or self.device == -1 or self.vendor == -1):
+            print("No device attached!")
+            return -1
 
-        return thread
+        data_list = []
+
+        # Loop data read until interrupt
+        while (event.is_set()):
+            try:
+                data_list = self.device.read(self.endpoint.bEndpointAddress, 8).tolist()
+
+                # Normalize data array size
+                if(len(data_list) == 8):
+                    # If data should be labeled
+                    if(label == 1):
+                        data_list = ("Device: " + str(self.num), data_list)
+
+                    print(data_list)
+
+            except usb.core.USBError as error:
+                if error.args == ('Operation timed out',):
+                    continue
 
     def read_multiple(self, devices, label=0):
         ''' Read multiple devices concurrently '''
@@ -200,11 +220,29 @@ class USB_Mouse(object):
 
         threads = []
 
+        # Shared variable to synchronize threads
+        event = Event()
+        event.set()
+
         # Start and store all threads
         for device in devices:
-            threads.append(device.threaded_read(label))
+            thread = Thread(target=device.threaded_read, args=(event,label,))
+            threads.append(thread)
+            thread.start()
+
+        # Synchronized thread kill on keyboard interrupt (CTRL+C)
+        try:
+            while(1):
+                time.sleep(.1)
+
+        except KeyboardInterrupt:
+            print("Read interrupted by user. Exiting.")
+            event.clear()
+            [thread.join() for thread in threads]
 
         return 0
+
+        # Thanks to: https://stackoverflow.com/questions/11436502/closing-all-threads-with-a-keyboard-interrupt
 
     def read_all(self, label=0):
         ''' Read all connected devices concurrently '''

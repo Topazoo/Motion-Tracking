@@ -108,7 +108,8 @@ if it isn't paired with a device).
 ##	Simple Example:
 ``` 
 sudo python 
->>> from USB_Mouse()
+>>> from USB_Device import USB_Mouse
+>>> device = USB_Mouse()
 >>> device.attach()
 Ensure the USB device you want to track is detached and press Enter >>>
 Please reattach the USB device and press Enter >>>

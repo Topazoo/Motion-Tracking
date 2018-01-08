@@ -153,44 +153,18 @@ class USB_Mouse(object):
 
         return 0
 
-    def read(self, label = 0):
-        ''' Read data from the device '''
-
-        # Check for connected device
-        if(self.prod_id == -1 or self.device == -1 or self.vendor == -1):
-            print("No device attached!")
-            return -1
-
-        data_list = []
-
-        # Loop data read until interrupt
-        while (1):
-            try:
-                data_list = self.device.read(self.endpoint.bEndpointAddress, 8).tolist()
-
-                # Normalize data array size
-                if(len(data_list) == 8):
-                    # If data should be labeled
-                    if(label == 1):
-                        data_list = ("Device: " + str(self.num), data_list)
-
-                    print(data_list)
-
-            except usb.core.USBError as error:
-                if error.args == ('Operation timed out',):
-                    continue
-
-            except KeyboardInterrupt:
-                print("Read interrupted by user. Exiting.")
-                return 0
-
-    def threaded_read(self, event, label=0):
+    def read(self, event=None, label=0):
         ''' Read data from devices until signaled '''
 
         # Check for connected device
         if(self.prod_id == -1 or self.device == -1 or self.vendor == -1):
             print("No device attached!")
             return -1
+
+        # If not threaded
+        if(event is None):
+            event = Event()
+            event.set()
 
         data_list = []
 
@@ -211,6 +185,12 @@ class USB_Mouse(object):
                 if error.args == ('Operation timed out',):
                     continue
 
+            # For non-threaded interrupt
+            except KeyboardInterrupt:
+                print("Read interrupted by user. Exiting.")
+                event.clear()
+                return 0
+
     def read_multiple(self, devices, label=0):
         ''' Read multiple devices concurrently '''
 
@@ -226,7 +206,7 @@ class USB_Mouse(object):
 
         # Start and store all threads
         for device in devices:
-            thread = Thread(target=device.threaded_read, args=(event,label,))
+            thread = Thread(target=device.read, args=(event,label,)) #Change to normal read
             threads.append(thread)
             thread.start()
 

@@ -1,4 +1,4 @@
-# Class to Read Optical Mouse Movements
+# Class to Read Concurrent Optical Mouse Movements
 
 ## Overview:
 The USB_Mouse class allows the the user to read data from a
@@ -9,12 +9,10 @@ physically attached USB mouse.
 https://www.python.org/download/releases/2.7/
 
 ###	pyusb:
-https://github.com/pyusb/pyusb
 pip install pyusb
 
 ###	Superuser Privileges
-Run all scripts with "sudo" or an equivalent
-command to elevate privileges. 
+sudo
 
 ## Methods:
 ### Creation: 
@@ -70,7 +68,7 @@ Parameters:
 	* 0 - Default. Data is unlabeled.
 	* 1 - Data is labeled.
 * verbosity: how the data is represented.
-	* 0 - Raw. eight element list of movements.
+	* 0 - Raw. Eight element list of movements.
 	* 1 - Default. Two element list of (direction, speed) tuples.
 
 #### All Devices:
@@ -92,7 +90,7 @@ Parameters:
 	* 0 - Default. Data is unlabeled.
 	* 1 - Data is labeled.
 * verbosity: how the data is represented.
-	* 0 - Raw. eight element list of movements.
+	* 0 - Raw. Eight element list of movements.
 	* 1 - Default. Two element list of (direction, speed) tuples.
 
 ###	Releasing the Device:

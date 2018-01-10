@@ -3,8 +3,8 @@
 ''' Author: Peter Swanson
             pswanson@ucdavis.edu
 
-    Description: Class to track optical mouse motion via USB. Can track data from multiple
-    mice concurrently.
+    Description: Class to track optical mouse motion via USB. Can 
+    track data from multiple mice concurrently.
 
     Version: Python 2.7
 
@@ -15,9 +15,155 @@
 
 from collections import Counter
 from threading import Thread, Event
+import time
 import usb.core
 import usb.util
-import time
+
+class Mouse_Movement(object):
+    ''' Analyze the movement of USB Mouse, the default is below
+        https://www.amazon.com/AmazonBasics-3-Button-Wired-Mouse-Black/dp/B005EJH6RW 
+        
+        To configure with a different mouse:
+        
+        1. Read the data array of the attached device with USB_Mouse.read(verbosity=0)
+        2. If your values are not the default values, set them accordingly:
+                lr_col - the column in the data array that changes with left and right movement
+                ud_col - the column in the data array that changes with up and down movement
+        3. If the range of movement values is not 0 - 255, set these accordingly:
+                lr_max - the maximum movement value in the data array for left and right movement
+                ud_max - the maximum movement value in the data array for up and down movement
+        4. If right movement values are larger than left movement values
+                rev_lr = 1
+        5. If downward movement values are larger than upward movement values
+                rev_ud = 1 '''
+
+    def __init__(self, device, data_list, lr_col=1, ud_col=2, 
+                 lr_max=255, ud_max=255, rev_lr=0, rev_ud=0):
+
+        self.lr_col = lr_col        # Left/Right col in data array
+        self.ud_col = ud_col        # Up/Down col in data array
+        self.lr_max = lr_max + 1    # Left/Right maximum value
+        self.ud_max = ud_max + 1    # Up/Down maximum value
+        self.rev_lr = rev_lr        # Reverse Left/Right (Right max)
+        self.rev_ud = rev_ud        # Reverse Up/Down (Down max)
+        
+        self.left_right = "None"    # Movement direction
+        self.up_down = "None"
+        self.left_right_spd = 0     # Movement speed
+        self.up_down_spd = 0
+        self.left_right_acc = 0     # Movement acceleration
+        self.up_down_acc = 0
+        self.raw = data_list        # Raw data
+        self.device = device        # Device
+
+        self.analyze_dir()          # Analyze raw data
+        self.analyze_spd()
+
+    def analyze_dir(self):
+        ''' Use the raw data collected from the mouse to 
+            determine its direction '''
+
+        # Calculate the median of possible l/r and u/d
+        # values. Movements share one column in the data, so
+        # direction is represented by a value on either side 
+        # of the median 
+
+        lr_median = self.lr_max/2
+        ud_median = self.ud_max/2
+        
+        # If there is movement in the l/r column in the raw data
+        if(self.raw[self.lr_col] > 0):
+            # Values below the median are right movement
+            if(self.raw[self.lr_col] < lr_median):
+                self.left_right = "Right"
+            # Values above the median are left movement
+            elif(self.raw[self.lr_col] > lr_median):
+                self.left_right = "Left"  
+
+        if(self.raw[self.ud_col] > 0):
+            if(self.raw[self.ud_col] < ud_median):
+                self.up_down = "Down"
+            elif(self.raw[self.ud_col] > ud_median):
+                self.up_down = "Up"
+
+        # Reverse movement if flag is set
+        if(self.rev_lr == 1 and self.left_right is "Right"):
+            self.left_right = "Left"
+        elif(self.rev_lr == 1 and self.left_right is "Left"):
+            self.left_right = "Right"
+
+        if(self.rev_ud == 1 and self.up_down is "Up"):
+            self.up_down = "Down"
+        elif(self.rev_ud == 1 and self.up_down is "Down"):
+            self.up_down = "Up"
+
+
+    def analyze_spd(self):
+        ''' Determine the speed of movement and represent as a range
+            with 0 being no movement, and 100 being maximum recordable
+            speed '''
+
+        lr_median = self.lr_max/2
+        ud_median = self.ud_max/2
+
+        # If movement is detected in the l/r column of the raw data
+        if(self.raw[self.lr_col] > 0):
+            # Values below the median are right movement
+            if(self.raw[self.lr_col] < lr_median):
+                # Calculate direction, then rate of speed based on range of possible values
+                self.left_right_spd = int(self.raw[self.lr_col]/float(lr_median - 1) * 100)
+            elif(self.raw[self.lr_col] > lr_median):
+                self.left_right_spd = int(((self.lr_max - self.raw[self.lr_col])/float(lr_median - 1)) * 100)
+
+        if(self.raw[self.ud_col] > 0):
+            if(self.raw[self.ud_col] < ud_median):
+                self.up_down_spd = int(self.raw[self.ud_col]/float(ud_median - 1) * 100)
+            elif(self.raw[self.ud_col] > ud_median):
+                self.up_down_spd = int(((self.ud_max - self.raw[self.ud_col])/float(ud_median - 1)) * 100)
+
+    def get_raw(self, label=0):
+        ''' Return raw data '''
+
+        if(label == 0):
+            return self.raw
+        else:
+            return("Device: " + str(self.raw))
+
+    def get_dir(self, label=0):
+        ''' Return movement direction. The label flag will
+            label data by device. ''' 
+
+        if(label == 0):
+            return (self.left_right, self.up_down)
+        else:
+            return("Device: " + str(self.device), self.left_right,
+                                    self.up_down)
+    
+    def get_spd(self, label=0):
+        ''' Return movement direction ''' 
+
+        if(label == 0):
+            return(self.left_right_spd, self.up_down_spd)
+        else:
+            return("Device: " + str(self.device),
+                                    self.left_right_spd, 
+                                    self.up_down_spd)
+    
+    def get_data(self, label=0):
+        ''' Return movement data '''
+
+        data = []
+
+        direc = self.get_dir()
+        speed = self.get_spd()
+        data.append((direc[0], speed[0]))
+        data.append((direc[1], speed[1]))
+
+        if(label == 0):
+            return data
+        else:
+            return("Device: " + str(self.device), data)
+
 
 class USB_Mouse(object):
     ''' Read USB Mouse tracking data '''
@@ -153,8 +299,11 @@ class USB_Mouse(object):
 
         return 0
 
-    def read(self, event=None, label=0):
-        ''' Read data from devices until signaled '''
+    def read(self, event=None, label=0, verbosity=1):
+        ''' Read data from devices until signaled. Data can be labeled per device
+            with the label flag. If the verbosity flag is set to 1, data will be 
+            printed as a list of tuples containing (direction, speed). If it is set
+            to 0, the raw data array will be printed. '''
 
         # Check for connected device
         if(self.prod_id == -1 or self.device == -1 or self.vendor == -1):
@@ -166,20 +315,18 @@ class USB_Mouse(object):
             event = Event()
             event.set()
 
-        data_list = []
-
         # Loop data read until interrupt
         while (event.is_set()):
             try:
                 data_list = self.device.read(self.endpoint.bEndpointAddress, 8).tolist()
-
-                # Normalize data array size
+                
+                # If data is in proper format, analyze movement
                 if(len(data_list) == 8):
-                    # If data should be labeled
-                    if(label == 1):
-                        data_list = ("Device: " + str(self.num), data_list)
-
-                    print(data_list)
+                    if(verbosity == 0):
+                        print(data_list)
+                    else:
+                        movement = Mouse_Movement(self.num, data_list)
+                        print(movement.get_data(label))
 
             except usb.core.USBError as error:
                 if error.args == ('Operation timed out',):
@@ -192,7 +339,8 @@ class USB_Mouse(object):
                 return 0
 
     def read_multiple(self, devices, label=0):
-        ''' Read multiple devices concurrently '''
+        ''' Read multiple devices concurrently. If the label flag is set,
+            the data read will be labeled by device'''
 
         if(isinstance(devices, list) is False):
             print("A list of devices was not passed to the function...")
@@ -206,7 +354,7 @@ class USB_Mouse(object):
 
         # Start and store all threads
         for device in devices:
-            thread = Thread(target=device.read, args=(event,label,)) #Change to normal read
+            thread = Thread(target=device.read, args=(event,label,)) 
             threads.append(thread)
             thread.start()
 

@@ -3,7 +3,7 @@
 ''' Author: Peter Swanson
             pswanson@ucdavis.edu
 
-    Description: Class to track optical mouse motion via USB. Can 
+    Description: Class to track optical mouse motion via USB. Can
     track data from multiple mice concurrently.
 
     Version: Python 2.7
@@ -21,23 +21,23 @@ import usb.util
 
 class Mouse_Movement(object):
     ''' Analyze the movement of USB Mouse, the default is below
-        https://www.amazon.com/AmazonBasics-3-Button-Wired-Mouse-Black/dp/B005EJH6RW 
-        
+        https://www.amazon.com/AmazonBasics-3-Button-Wired-Mouse-Black/dp/B005EJH6RW
+
         To configure with a different mouse:
-        
+
         1. Read the data array of the attached device with USB_Mouse.read(verbosity=0)
         2. If your values are not the default values, set them accordingly:
-                lr_col - the column in the data array that changes with left and right movement
-                ud_col - the column in the data array that changes with up and down movement
+                lr_col = the column in the data array that changes with left and right movement
+                ud_col = the column in the data array that changes with up and down movement
         3. If the range of movement values is not 0 - 255, set these accordingly:
-                lr_max - the maximum movement value in the data array for left and right movement
-                ud_max - the maximum movement value in the data array for up and down movement
+                lr_max = the maximum movement value in the data array for left and right movement
+                ud_max = the maximum movement value in the data array for up and down movement
         4. If right movement values are larger than left movement values
                 rev_lr = 1
         5. If downward movement values are larger than upward movement values
                 rev_ud = 1 '''
 
-    def __init__(self, device, data_list, lr_col=1, ud_col=2, 
+    def __init__(self, device, data_list, lr_col=1, ud_col=2,
                  lr_max=255, ud_max=255, rev_lr=0, rev_ud=0):
 
         self.lr_col = lr_col        # Left/Right col in data array
@@ -46,7 +46,7 @@ class Mouse_Movement(object):
         self.ud_max = ud_max + 1    # Up/Down maximum value
         self.rev_lr = rev_lr        # Reverse Left/Right (Right max)
         self.rev_ud = rev_ud        # Reverse Up/Down (Down max)
-        
+
         self.left_right = "None"    # Movement direction
         self.up_down = "None"
         self.left_right_spd = 0     # Movement speed
@@ -60,17 +60,17 @@ class Mouse_Movement(object):
         self.analyze_spd()
 
     def analyze_dir(self):
-        ''' Use the raw data collected from the mouse to 
+        ''' Use the raw data collected from the mouse to
             determine its direction '''
 
         # Calculate the median of possible l/r and u/d
         # values. Movements share one column in the data, so
-        # direction is represented by a value on either side 
-        # of the median 
+        # direction is represented by a value on either side
+        # of the median
 
         lr_median = self.lr_max/2
         ud_median = self.ud_max/2
-        
+
         # If there is movement in the l/r column in the raw data
         if(self.raw[self.lr_col] > 0):
             # Values below the median are right movement
@@ -78,7 +78,7 @@ class Mouse_Movement(object):
                 self.left_right = "Right"
             # Values above the median are left movement
             elif(self.raw[self.lr_col] > lr_median):
-                self.left_right = "Left"  
+                self.left_right = "Left"
 
         if(self.raw[self.ud_col] > 0):
             if(self.raw[self.ud_col] < ud_median):
@@ -131,24 +131,24 @@ class Mouse_Movement(object):
 
     def get_dir(self, label=0):
         ''' Return movement direction. The label flag will
-            label data by device. ''' 
+            label data by device. '''
 
         if(label == 0):
             return (self.left_right, self.up_down)
         else:
             return("Device: " + str(self.device), self.left_right,
                                     self.up_down)
-    
+
     def get_spd(self, label=0):
-        ''' Return movement direction ''' 
+        ''' Return movement direction '''
 
         if(label == 0):
             return(self.left_right_spd, self.up_down_spd)
         else:
             return("Device: " + str(self.device),
-                                    self.left_right_spd, 
+                                    self.left_right_spd,
                                     self.up_down_spd)
-    
+
     def get_data(self, label=0):
         ''' Return movement data '''
 
@@ -163,7 +163,6 @@ class Mouse_Movement(object):
             return data
         else:
             return("Device: " + str(self.device), data)
-
 
 class USB_Mouse(object):
     ''' Read USB Mouse tracking data '''
@@ -181,7 +180,7 @@ class USB_Mouse(object):
         self.index = -1     # Index in connected devices list
         self.interface = 0  # Device constant
 
-    def attach(self):
+    def connect(self):
         ''' Take control of the device and read data '''
 
         # Find the device to attach to
@@ -211,9 +210,7 @@ class USB_Mouse(object):
         USB_Mouse.con_devices.append(self)
         self.index = len(self.con_devices) - 1
 
-        print("Device " + str(self.num) + " attached!")
-
-        return 0
+        print("Device " + str(self.num) + " connected")
 
     def find_device(self):
         ''' Find a USB device '''
@@ -222,7 +219,7 @@ class USB_Mouse(object):
         with_attach = [[], []]
         final = []
 
-        raw_input("Ensure the USB device you want to track is detached and press Enter >>> ")
+        raw_input("Please disconnect the USB device and press Enter >>> ")
 
         # Get all connected devices
         devices = usb.core.find(find_all=True)
@@ -232,7 +229,7 @@ class USB_Mouse(object):
             all_ids[0].append(int(cfg.idVendor))
             all_ids[1].append(int(cfg.idProduct))
 
-        raw_input("Please attach the USB device and press Enter >>> ")
+        raw_input("Please connect the USB device and press Enter >>> ")
 
         # Store a second list of all attached vendor and product IDs
         devices = usb.core.find(find_all=True)
@@ -297,11 +294,9 @@ class USB_Mouse(object):
         # Claim the device
         usb.util.claim_interface(self.device, self.interface)
 
-        return 0
-
     def read(self, event=None, label=0, verbosity=1):
         ''' Read data from devices until signaled. Data can be labeled per device
-            with the label flag. If the verbosity flag is set to 1, data will be 
+            with the label flag. If the verbosity flag is set to 1, data will be
             printed as a list of tuples containing (direction, speed). If it is set
             to 0, the raw data array will be printed. '''
 
@@ -319,7 +314,7 @@ class USB_Mouse(object):
         while (event.is_set()):
             try:
                 data_list = self.device.read(self.endpoint.bEndpointAddress, 8).tolist()
-                
+
                 # If data is in proper format, analyze movement
                 if(len(data_list) == 8):
                     if(verbosity == 0):
@@ -336,9 +331,9 @@ class USB_Mouse(object):
             except KeyboardInterrupt:
                 print("Read interrupted by user. Exiting.")
                 event.clear()
-                return 0
+                return
 
-    def read_multiple(self, devices, label=0):
+    def read_multiple(self, devices, label=0, verbosity=1):
         ''' Read multiple devices concurrently. If the label flag is set,
             the data read will be labeled by device'''
 
@@ -354,7 +349,7 @@ class USB_Mouse(object):
 
         # Start and store all threads
         for device in devices:
-            thread = Thread(target=device.read, args=(event,label,)) 
+            thread = Thread(target=device.read, args=(event, label, verbosity))
             threads.append(thread)
             thread.start()
 
@@ -368,16 +363,14 @@ class USB_Mouse(object):
             event.clear()
             [thread.join() for thread in threads]
 
-        return 0
-
-        # Thanks to: https://stackoverflow.com/questions/11436502/closing-all-threads-with-a-keyboard-interrupt
+    # Thanks to: https://stackoverflow.com/questions/11436502/closing-all-threads-with-a-keyboard-interrupt
 
     def read_all(self, label=0):
         ''' Read all connected devices concurrently '''
 
         self.read_multiple(self.get_devices(), label)
 
-    def release(self):
+    def disconnect(self):
         ''' Release the device to the kernel '''
 
         # Check for connected device
@@ -400,21 +393,17 @@ class USB_Mouse(object):
         del USB_Mouse.con_devices[self.index]
 
         # Reinitialize for reuse
-        print("Device " + str(self.num) + " released!")
+        print("Device " + str(self.num) + " disconnected")
 
         self.__init__()
 
-        return 0
-
     def get_info(self):
-        ''' Return info:
-            num
-            index
-            prod_id
-            vendor
-            num_con_devices '''
+        ''' Return info '''
 
-        return (self.num, self.index, self.prod_id, self.vendor, USB_Mouse.num_con_devices)
+        return [("Number", self.num), ("Index", self.index),
+                ("Product_ID", self.prod_id), 
+                ("Vendor_ID", self.vendor),
+                ("Total_Devices", USB_Mouse.num_con_devices)]
 
     def get_devices(self):
         ''' Return a list of all USB_Mouse objects paired with a physical device'''

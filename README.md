@@ -10,40 +10,46 @@ https://www.python.org/download/releases/2.7/
 
 ###	pyusb:
 https://github.com/pyusb/pyusb
+pip install pyusb
 
 ###	Superuser Privileges
 Run all scripts with "sudo" or an equivalent
 command to elevate privileges. 
 
 ## Methods:
-### 	Creation: 
+### Creation: 
 ```
 	device = USB_Mouse()
 ```
-Creates an object ready to pair with a physical mouse
+Creates an object ready to pair with a physical mouse.
 
-###	Attaching a Device:
+###	Connecting to a Device:
 ```
-	device.attach()
+	device.connect()
 ```
-Prompts the user to attach the mouse and verifies the
+Prompts the user to connect the mouse and verifies the
 script has taken control of the device from the kernel.
-Returns 0 for successful attachment and -1 for failure.
+Returns -1 on failure.
 
 ###	Reading Data From a Single Device:
 ```
 	device.read()
 
 	device.read(label=1)
+
+	device.read(verbosity=1)
 ```
 Reads mouse movements until a keyboard interrupt (CTRL+C)
 is detected.
-Returns 0 for a successful read and -1 for failure.
+Returns -1 on failure.
 
 Parameters: 
 * label: labels the data with the device it was read from.
 	* 0 - Default. Data is unlabeled.
 	* 1 - Data is labeled.
+* verbosity: how the data is represented.
+	* 0 - Raw. eight element list of movements.
+	* 1 - Default. Two element list of (direction, speed) tuples.
 
 ### Reading Data From Multiple Devices:
 #### Some Devices:
@@ -51,41 +57,50 @@ Parameters:
 	device.read_multiple([devices]) 
 					
 	device.read_multiple([devices], label=1)
+
+	device.read_multiple([devices], verbosity=1)
 ```
 Reads concurrent mouse movements from a list of devices
 until a keyboard interrupt (CTRL+C) is detected.
-Returns 0 for a successful read and -1 for failure.
+Returns -1 on failure.
 
 Parameters: 
 * [devices]: A list of USB_Mouse objects connected to physical devices.
 * label: Labels the data with the device it was read from.
 	* 0 - Default. Data is unlabeled.
 	* 1 - Data is labeled.
+* verbosity: how the data is represented.
+	* 0 - Raw. eight element list of movements.
+	* 1 - Default. Two element list of (direction, speed) tuples.
 
 #### All Devices:
-
 ```
 	device.read_all()
 	
 	device.read_all(label=1)
+
+	device.read_all(verbosity=1)
 ```
 Reads concurrent mouse movement from all USB_Mouse objects that
 are connected to a physical device until a keyboard interrupt (CTRL+C)
 is detected. This method may be invoked through any USB_Mouse object 
 (even if it is not connected to a physical device).
-Returns 0 for a successful read and -1 for failure.
+Returns -1 on failure.
 
 Parameters: 
 * label: labels the data with the device it was read from.
 	* 0 - Default. Data is unlabeled.
 	* 1 - Data is labeled.
+* verbosity: how the data is represented.
+	* 0 - Raw. eight element list of movements.
+	* 1 - Default. Two element list of (direction, speed) tuples.
 
 ###	Releasing the Device:
 ```
-	device.release()
+	device.disconnect()
 ```
 Gives control of the device back to the kernel. 
-Returns 0 for successful release and -1 for failure.
+Returns -1 on failure.
 
 ### Getting Device Information:
 ```
@@ -110,23 +125,29 @@ if it isn't paired with a device).
 sudo python 
 >>> from USB_Device import USB_Mouse
 >>> device = USB_Mouse()
->>> device.attach()
-Ensure the USB device you want to track is detached and press Enter >>>
-Please reattach the USB device and press Enter >>>
-Device 0 attached!
+>>> device.connect()
+Please disconnect the USB device and press Enter >>>
+Please connect the USB device and press Enter >>>
+Device 0 connected
 >>> device.read()
-[0, 255, 0, 0]
-[0, 255, 1, 0]
-[0, 1, 0, 0]
-[0, 1, 255, 0]
+[('Left', 11), ('Down', 3)]
+[('Left', 22), ('Down', 3)]
+[('Left', 32), ('Down', 3)]
+[('Left', 37), ('Down', 6)]
+[('Left', 42), ('Down', 5)]
+[('Left', 42), ('Down', 7)]
+[('Left', 32), ('Down', 5)]
+[('Left', 27), ('Down', 4)]
+[('Left', 18), ('Down', 3)]
 ...
->>> device.release()
-Device 0 released!
+>>> device.disconnect()
+Device 0 disconnected
 ```
 
 ## More Examples Can Be Found In:
-* single_mouse_example.py
-* multi_mouse_example.py
+* ex_single_mouse_data.py
+* ex_single_mouse_read.py
+* ex_multi_mouse_read.py
 
 ## Known Issues:
 ### Errno 16/19 on Attachment:
@@ -134,6 +155,31 @@ Usually this occurs if the Enter key is pressed too quickly after a
 mouse is attached. Ensure the mouse has been given enough time to 
 be fully detected by the operating system.
 
-## Interpreting Data:
-### Information for interpreting gathered data can be found at:
-https://www.orangecoat.com/how-to/read-and-decode-data-from-your-mouse-using-this-pyusb-hack
+### Incorrect Readings:
+The script reads data from an AmazonBasics 3-Button Wired Mouse by default.
+If it is giving you the wrong verbose readings, you need to configure the 
+parameters of __init()__ in the Mouse_Movement class.
+
+	1. Read the data array of the attached device with USB_Mouse.read(verbosity=0)
+	
+	2. If your movement columns not the same as the default columns:
+			lr_col = the column in the data array that changes with left and right movement
+			ud_col = the column in the data array that changes with up and down movement
+	
+	3. If the range of movement values in both columns is not 0 - 255:
+			lr_max = the maximum movement value for left and right movement
+			ud_max = the maximum movement value for up and down movement
+	
+	4. If right movement values are larger than left movement values
+			rev_lr = 1
+	
+	5. If down movement values are larger than up movement values
+			rev_ud = 1
+
+## Upcoming Features:
+### Auto detect mouse configurations
+I should be able to add a feature to allow the mouse config to be set by a few test readings. It's a hassle setting new configs right now.
+
+### Streamed information
+Right now data just prints, there need to be functions that constantly return read information so it can be used.
+A bounded queue of recent movements or stored movements could also be implemented.

@@ -3,7 +3,7 @@
 ''' Author: Peter Swanson
             pswanson@ucdavis.edu
 
-    Description: Read data from a single mouse '''
+    Description: Display information about a single mouse '''
 
 from USB_Device import USB_Mouse
 
@@ -13,23 +13,17 @@ device = USB_Mouse()
 # Print default info (no attached device)
 print "Device info:", device.get_info()
 
-# Attach a device
-device.attach()
+# Connect a device
+device.connect()
 
 # Print device info
 print "Device info:", device.get_info()
 
-# Read the device until keyboard interrupt (CTRL+C)
-device.read()
-
 # Check attached device list
 print "Connected devices:", device.get_devices()
 
-# Release the device
-device.release()
+# Disconnect the device
+device.disconnect()
 
 # Check attached device list again
 print "Connected devices:", device.get_devices()
-
-# Print default info (no attached device)
-print "Device info:", device.get_info()

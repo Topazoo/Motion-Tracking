@@ -15,7 +15,6 @@
 
 from collections import Counter
 from threading import Thread, Event
-import time
 import usb.core
 import usb.util
 
@@ -47,13 +46,14 @@ class Mouse_Movement(object):
         self.rev_lr = rev_lr        # Reverse Left/Right (Right max)
         self.rev_ud = rev_ud        # Reverse Up/Down (Down max)
 
+        self.raw = data_list        # Raw data
+
         self.left_right = "None"    # Movement direction
         self.up_down = "None"
         self.left_right_spd = 0     # Movement speed
         self.up_down_spd = 0
         self.left_right_acc = 0     # Movement acceleration
         self.up_down_acc = 0
-        self.raw = data_list        # Raw data
         self.device = device        # Device
 
         self.analyze_dir()          # Analyze raw data
@@ -121,45 +121,45 @@ class Mouse_Movement(object):
             elif(self.raw[self.ud_col] > ud_median):
                 self.up_down_spd = int(((self.ud_max - self.raw[self.ud_col])/float(ud_median - 1)) * 100)
 
-    def get_raw(self, label=0):
+    def get_raw(self, label=False):
         ''' Return raw data '''
 
-        if(label == 0):
+        if(label is False):
             return self.raw
         else:
-            return("Device: " + str(self.raw))
+            return "Device: " + str(self.raw)
 
-    def get_dir(self, label=0):
+    def get_dir(self, label=False):
         ''' Return movement direction. The label flag will
             label data by device. '''
 
-        if(label == 0):
+        if(label is False):
             return (self.left_right, self.up_down)
         else:
             return("Device: " + str(self.device), self.left_right,
-                                    self.up_down)
+                   self.up_down)
 
-    def get_spd(self, label=0):
+    def get_spd(self, label=False):
         ''' Return movement direction '''
 
-        if(label == 0):
+        if(label is False):
             return(self.left_right_spd, self.up_down_spd)
         else:
             return("Device: " + str(self.device),
-                                    self.left_right_spd,
-                                    self.up_down_spd)
+                   self.left_right_spd,
+                   self.up_down_spd)
 
-    def get_data(self, label=0):
+    def get_data(self, label=False):
         ''' Return movement data '''
 
         data = []
 
-        direc = self.get_dir()
-        speed = self.get_spd()
+        direc = self.get_dir()                  # Direction
+        speed = self.get_spd()                  # Speed
         data.append((direc[0], speed[0]))
         data.append((direc[1], speed[1]))
 
-        if(label == 0):
+        if(label is False):
             return data
         else:
             return("Device: " + str(self.device), data)
@@ -179,6 +179,9 @@ class USB_Mouse(object):
         self.num = -1       # Class ID for classes with connected devices
         self.index = -1     # Index in connected devices list
         self.interface = 0  # Device constant
+
+        self.movement = None # Current device movement
+        self.move_flag = 0
 
     def connect(self):
         ''' Take control of the device and read data '''
@@ -294,21 +297,13 @@ class USB_Mouse(object):
         # Claim the device
         usb.util.claim_interface(self.device, self.interface)
 
-    def read(self, event=None, label=0, verbosity=1):
-        ''' Read data from devices until signaled. Data can be labeled per device
-            with the label flag. If the verbosity flag is set to 1, data will be
-            printed as a list of tuples containing (direction, speed). If it is set
-            to 0, the raw data array will be printed. '''
+    def read_thread_loop(self, event):
+        ''' Reads data from a device until signaled. '''
 
         # Check for connected device
         if(self.prod_id == -1 or self.device == -1 or self.vendor == -1):
             print("No device attached!")
             return -1
-
-        # If not threaded
-        if(event is None):
-            event = Event()
-            event.set()
 
         # Loop data read until interrupt
         while (event.is_set()):
@@ -317,28 +312,29 @@ class USB_Mouse(object):
 
                 # If data is in proper format, analyze movement
                 if(len(data_list) == 8):
-                    if(verbosity == 0):
-                        print(data_list)
-                    else:
-                        movement = Mouse_Movement(self.num, data_list)
-                        print(movement.get_data(label))
+                    self.movement = Mouse_Movement(self.num, data_list)
+                    self.move_flag = 1
 
             except usb.core.USBError as error:
                 if error.args == ('Operation timed out',):
                     continue
 
-            # For non-threaded interrupt
+            # For keyboard interrupt
             except KeyboardInterrupt:
                 print("Read interrupted by user. Exiting.")
                 event.clear()
                 return
 
-    def read_multiple(self, devices, label=0, verbosity=1):
-        ''' Read multiple devices concurrently. If the label flag is set,
+    def read(self, devices=None, sync=True, label=False, verbosity=2):
+        ''' Read one or more devices concurrently. If the label flag is set,
             the data read will be labeled by device'''
 
+        # If no list passed
+        if(devices is None):
+            devices = [self]
+
+        #If non list passed
         if(isinstance(devices, list) is False):
-            print("A list of devices was not passed to the function...")
             return -1
 
         threads = []
@@ -349,26 +345,33 @@ class USB_Mouse(object):
 
         # Start and store all threads
         for device in devices:
-            thread = Thread(target=device.read, args=(event, label, verbosity))
+            thread = Thread(target=device.read_thread_loop, args=(event,))
+            # If sync is false, kill on program exit
+            if(sync is False):
+                thread.daemon = True
             threads.append(thread)
             thread.start()
 
-        # Synchronized thread kill on keyboard interrupt (CTRL+C)
-        try:
-            while(1):
-                time.sleep(.1)
+        if(sync is True):
+            # Synchronized thread kill on keyboard interrupt (CTRL+C)
+            try:
+                while(1):
+                    for device in devices:
+                        movement = device.get_movement(label, verbosity)
+                        if(movement is not None):
+                            print movement
 
-        except KeyboardInterrupt:
-            print("Read interrupted by user. Exiting.")
-            event.clear()
-            [thread.join() for thread in threads]
+            except KeyboardInterrupt:
+                print("Read interrupted by user. Exiting.")
+                event.clear()
+                [thread.join() for thread in threads]
 
     # Thanks to: https://stackoverflow.com/questions/11436502/closing-all-threads-with-a-keyboard-interrupt
 
-    def read_all(self, label=0):
+    def read_all(self, sync=True , label=True, verbosity=2):
         ''' Read all connected devices concurrently '''
 
-        self.read_multiple(self.get_devices(), label)
+        self.read(self.get_devices(), sync, label, verbosity)
 
     def disconnect(self):
         ''' Release the device to the kernel '''
@@ -401,9 +404,30 @@ class USB_Mouse(object):
         ''' Return info '''
 
         return [("Number", self.num), ("Index", self.index),
-                ("Product_ID", self.prod_id), 
+                ("Product_ID", self.prod_id),
                 ("Vendor_ID", self.vendor),
                 ("Total_Devices", USB_Mouse.num_con_devices)]
+
+    def get_movement(self, label=False, verbosity=2):
+        ''' Get the current movement '''
+
+        # If movement is flagged as updated and verbosity is 1
+        # Return raw data
+        if(verbosity == 1 and self.move_flag == 1):
+            movement = self.movement.get_raw(label)
+            self.move_flag = 0
+            return movement
+
+        # If movement is flagged as updated and verbosity is 2
+        # Return verbose data
+        elif(verbosity == 2 and self.move_flag == 1):
+            movement = self.movement.get_data(label)
+            self.move_flag = 0
+            return movement
+
+        #If movement is not flagged as updated
+        else:
+            return None
 
     def get_devices(self):
         ''' Return a list of all USB_Mouse objects paired with a physical device'''

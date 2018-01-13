@@ -18,7 +18,23 @@ device_0.connect()
 device_1.connect()
 
 # Read all connected devices concurrently with devices labeled
-device_0.read_all(label=True)
+device_0.read_all(sync=False)
+
+# Loop reading 50 movements from device 1
+x = 0
+while(x < 50):
+    movement = device_0.get_movement(label=True)
+    if(movement != None):
+        print movement
+        x += 1
+
+# Loop reading 50 movements from device 2
+x = 0
+while(x < 50):
+    movement = device_1.get_movement(label=True)
+    if(movement != None):
+        print movement
+        x += 1
 
 # Disconnect devices
 device_0.disconnect()

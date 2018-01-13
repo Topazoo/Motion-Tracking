@@ -58,7 +58,7 @@ Parameters:
 	* 1 - Raw. Eight element list of movements.
 	* 2 - Default. Two element list of (direction, speed) tuples.
 
-#### All Devices:
+### All Devices:
 ```
 	device.read_all()
 
@@ -154,7 +154,7 @@ Device 0 connected
 Device 0 disconnected
 ```
 
-## More Examples Can Be Found In:
+## More Examples Can Be Found In /examples:
 * ex_single_mouse_data.py
 	* Connect a single device and display information about it.
 * ex_single_mouse_read.py
@@ -163,11 +163,9 @@ Device 0 disconnected
 	* Connect a single device and read information from it
 	  asynchronously.
 * ex_multi_mouse_read.py
-	* Connect to multiple devices and read labeled information
-	* from them.
+	* Connect to multiple devices and read labeled information from them.
 * ex_multi_mouse_async.py
-	* Connect to multiple devices and read labeled information
-	* from them asynchronously.
+	* Connect to multiple devices and read labeled information from them asynchronously.
 
 ## Known Issues:
 ### Errno 16/19 on Attachment:

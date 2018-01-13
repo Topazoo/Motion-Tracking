@@ -154,7 +154,7 @@ Device 0 connected
 Device 0 disconnected
 ```
 
-## More Examples Can Be Found In /examples:
+## More Examples Can Be Found In:
 * ex_single_mouse_data.py
 	* Connect a single device and display information about it.
 * ex_single_mouse_read.py

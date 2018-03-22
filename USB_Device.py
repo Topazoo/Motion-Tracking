@@ -183,15 +183,16 @@ class USB_Mouse(object):
         self.movement = None # Current device movement
         self.move_flag = 0
 
-    def connect(self):
+    def connect(self, gui=0, guids=[[], []]):
         ''' Take control of the device and read data '''
 
         # Find the device to attach to
-        ids = self.find_device()
+        ids = self.find_device(gui, guids)
 
-        if(ids == -1):
-            print("Failed to connect to a device...")
-            return -1
+        if(ids < 0):
+            if(gui == 0):
+                print("Failed to connect to a device...")
+            return ids
 
         self.vendor = ids[0][0]
         self.prod_id = ids[1][0]
@@ -202,8 +203,9 @@ class USB_Mouse(object):
 
         # Check success
         if (self.prod_id == -1 or self.device == -1 or self.vendor == -1):
-            print("No device attached!")
-            return -1
+            if(gui == 0):
+                print("No device attached!")
+            return -2
 
         # Update shared number of connected devices
         self.num = USB_Mouse.num_con_devices
@@ -213,74 +215,80 @@ class USB_Mouse(object):
         USB_Mouse.con_devices.append(self)
         self.index = len(self.con_devices) - 1
 
-        print("Device " + str(self.num) + " connected")
+        if(gui == 0):
+            print("Device " + str(self.num) + " connected")
 
-    def find_device(self):
-        ''' Find a USB device '''
+    def getDeviceIDs(self):
+        ''' Get all connected devices '''
 
-        all_ids = [[], []]
-        with_attach = [[], []]
-        final = []
-
-        raw_input("Please disconnect the USB device and press Enter >>> ")
-
-        # Get all connected devices
+        dev_ids = [[], []]
         devices = usb.core.find(find_all=True)
 
         # Store a list of all attached vendor and product IDs
         for cfg in devices:
-            all_ids[0].append(int(cfg.idVendor))
-            all_ids[1].append(int(cfg.idProduct))
+            dev_ids[0].append(int(cfg.idVendor))
+            dev_ids[1].append(int(cfg.idProduct))
 
-        raw_input("Please connect the USB device and press Enter >>> ")
+        return dev_ids
+
+    def find_device(self, gui=0, guids=[[], []]):
+        ''' Find a USB device '''
+
+        final = []
+
+        if(gui == 0): # Already ran in GUI wrapper
+            raw_input("Ensure the device is disconnected and press Enter >>> ")
+            guids = self.getDeviceIDs()
+            raw_input("Please connect the USB device and press Enter >>> ")
 
         # Store a second list of all attached vendor and product IDs
-        devices = usb.core.find(find_all=True)
-
-        for cfg in devices:
-            with_attach[0].append(int(cfg.idVendor))
-            with_attach[1].append(int(cfg.idProduct))
+        with_attach = self.getDeviceIDs()
 
         # The difference of the lists is the attached device
         # Counter allows for multiple mice with the same IDs to be detected
-        final.append(list((Counter(with_attach[0]) - Counter(all_ids[0])).elements()))
-        final.append(list((Counter(with_attach[1]) - Counter(all_ids[1])).elements()))
+        final.append(list((Counter(with_attach[0]) - Counter(guids[0])).elements()))
+        final.append(list((Counter(with_attach[1]) - Counter(guids[1])).elements()))
 
         # Verify results
-        result = self.verify_device(final)
+        result = self.verify_device(final, gui)
 
-        if(result == -1):
+        if(result < 0):
             return result
 
         return (result[0], result[1])
 
-    def verify_device(self, final):
+    def verify_device(self, final, gui=0):
         ''' Verify a USB device was found '''
 
         flag = 0
 
         # More than one product or vendor ID recorded
         if(len(final[0]) > 1 or len(final[1]) > 1):
-            flag = 1
-            print("Multiple devices connected.")
+            flag = -1
+            if(gui == 0):
+                print("Multiple devices connected!")
 
         # No product and vendor ID recorded
         elif(len(final[0]) < 1 and len(final[1]) < 1):
-            flag = 1
-            print("No device detected.")
+            flag = -2
+            if (gui == 0):
+                print("No device detected!")
 
         # A product or vendor ID was detected without the other
         elif(len(final[0]) != len(final[1])):
-            flag = 1
-            print("Error. Vendor/Product ID Mismatch.")
+            flag = -3
+            if (gui == 0):
+                print("Error. Vendor/Product ID Mismatch!")
 
-        if(flag == 1):
-            val = raw_input("Press Enter to restart or \'q\' to quit >>> ")
-
-            if(val == 'q'):
-                return -1
+        if(flag != 0):
+            if(gui == 0):
+                val = raw_input("Press Enter to restart or \'q\' to quit >>> ")
+                if(val == 'q'):
+                    return -1
+                else:
+                    return self.find_device()
             else:
-                return self.find_device()
+                return flag
 
         return final
 
@@ -356,10 +364,13 @@ class USB_Mouse(object):
             # Synchronized thread kill on keyboard interrupt (CTRL+C)
             try:
                 while(1):
+                    movements = []
                     for device in devices:
                         movement = device.get_movement(label, verbosity)
                         if(movement is not None):
-                            print movement
+                            movements.append(movement)
+                    if(len(movements) > 0):
+                        print movements
 
             except KeyboardInterrupt:
                 print("Read interrupted by user. Exiting.")

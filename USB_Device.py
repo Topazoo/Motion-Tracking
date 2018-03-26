@@ -17,6 +17,7 @@ from collections import Counter
 from threading import Thread, Event
 import usb.core
 import usb.util
+import Queue
 
 class Mouse_Movement(object):
     ''' Analyze the movement of USB Mouse, the default is below
@@ -180,8 +181,7 @@ class USB_Mouse(object):
         self.index = -1     # Index in connected devices list
         self.interface = 0  # Device constant
 
-        self.movement = None # Current device movement
-        self.move_flag = 0
+        self.movements = Queue.Queue()  # Recorded movements
 
     def connect(self, gui=0, guids=[[], []]):
         ''' Take control of the device and read data '''
@@ -320,8 +320,8 @@ class USB_Mouse(object):
 
                 # If data is in proper format, analyze movement
                 if(len(data_list) == 8):
-                    self.movement = Mouse_Movement(self.num, data_list)
-                    self.move_flag = 1
+                    movement = Mouse_Movement(self.num, data_list)
+                    self.movements.put(movement, block=False)
 
             except usb.core.USBError as error:
                 if error.args == ('Operation timed out',):
@@ -333,7 +333,7 @@ class USB_Mouse(object):
                 event.clear()
                 return
 
-    def read(self, devices=None, sync=True, label=False, verbosity=2):
+    def read(self, devices=None, sync=True, label=False, verbosity=2, gui=0):
         ''' Read one or more devices concurrently. If the label flag is set,
             the data read will be labeled by device'''
 
@@ -364,11 +364,16 @@ class USB_Mouse(object):
             # Synchronized thread kill on keyboard interrupt (CTRL+C)
             try:
                 while(1):
+                    if(gui == 1):
+                        break
+
                     movements = []
                     for device in devices:
-                        movement = device.get_movement(label, verbosity)
-                        if(movement is not None):
-                            movements.append(movement)
+                        if(device.movements.empty() is False):
+                            movement = device.get_movement(label, verbosity)
+                            if(movement is not None):
+                                movements.append(movement)
+
                     if(len(movements) > 0):
                         print movements
 
@@ -422,23 +427,17 @@ class USB_Mouse(object):
     def get_movement(self, label=False, verbosity=2):
         ''' Get the current movement '''
 
-        # If movement is flagged as updated and verbosity is 1
+        # If verbosity is 1
         # Return raw data
-        if(verbosity == 1 and self.move_flag == 1):
-            movement = self.movement.get_raw(label)
-            self.move_flag = 0
+        if(verbosity == 1):
+            movement = self.movements.get(block=False).get_raw(label)
             return movement
 
-        # If movement is flagged as updated and verbosity is 2
+        # If verbosity is 2
         # Return verbose data
-        elif(verbosity == 2 and self.move_flag == 1):
-            movement = self.movement.get_data(label)
-            self.move_flag = 0
+        elif(verbosity == 2):
+            movement = self.movements.get(block=False).get_data(label)
             return movement
-
-        #If movement is not flagged as updated
-        else:
-            return None
 
     def get_devices(self):
         ''' Return a list of all USB_Mouse objects paired with a physical device'''

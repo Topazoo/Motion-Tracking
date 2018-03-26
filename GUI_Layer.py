@@ -5,39 +5,144 @@
 
     Description: Graphical interface layer for the optical mouse reader.
 
-    Version: Python 2.7'''
+    Note: Many thanks to https://nikolak.com/pyqt-threading-tutorial/ for the UTF-8 encoding functions and example
+    code for PyQt threading.
 
+    Version: Python 2.7 '''
 
 import sys
+from PyQt4 import QtCore, QtGui
 from USB_Device import Mouse_Movement, USB_Mouse
-from PyQt4 import QtGui, QtCore
-from PyQt4.QtGui import *
 
+class Ui_MainWindow(QtGui.QMainWindow):
+    ''' Main window of the GUI '''
 
-class MainWindow(QtGui.QMainWindow):
     def __init__(self):
-        super(MainWindow, self).__init__()
+        super(self.__class__, self).__init__()
         self.tracking = USB_Mouse()
-        self.mdi = QtGui.QMdiArea()
-        self.setCentralWidget(self.mdi)
-        self.mdi.tileSubWindows()
-        self.initUI()
+        self.setup_UI(self)
 
-    def initUI(self):
-        self.setGeometry(500, 500, 500, 500)
-        self.setWindowTitle('Tracking Data')
+    def setup_UI(self, MainWindow):
+        ''' Set up main window interface '''
+
+        # Name, size and icon
+        MainWindow.setObjectName(_fromUtf8("MainWindow"))
+        MainWindow.resize(526, 373)
         self.setWindowIcon(QtGui.QIcon('icons/main.png'))
-        self.show()
-        self.addMenu()
 
-    def addMenu(self):
+        self.add_menu()
+        self.add_central_widget(MainWindow)
+        self.add_data_display()
+
+        MainWindow.setCentralWidget(self.centralwidget)
+
+        # Connect slots to labels
+        self.translate_UI(MainWindow)
+        QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+        self.show()
+
+    def add_menu(self):
+        ''' Build the menubar '''
+
         self.statusBar()
         menubar = self.menuBar()
 
-        fileMenuOptions(self, menubar)
-        devMenuOptions(self, menubar)
+        self.fileMenuOptions(menubar)
+        self.devMenuOptions(menubar)
+
+    def add_central_widget(self, MainWindow):
+        ''' Build the central widget '''
+
+        self.centralwidget = QtGui.QWidget(MainWindow)
+        self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
+        self.verticalLayout = QtGui.QVBoxLayout(self.centralwidget)
+        self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
+
+    def add_data_display(self):
+        ''' Add field to display data '''
+
+        # Build widget to display data list label
+        self.data_list_label = QtGui.QLabel(self.centralwidget)
+        self.data_list_label.setObjectName(_fromUtf8("data_list_label"))
+        self.verticalLayout.addWidget(self.data_list_label)
+
+        # Build widget for data list
+        self.data_list = QtGui.QListWidget(self.centralwidget)
+        self.data_list.setBatchSize(1)
+        self.data_list.setObjectName(_fromUtf8("data_list"))
+        self.verticalLayout.addWidget(self.data_list)
+
+    def translate_UI(self, MainWindow):
+        ''' Label to connect slots '''
+
+        MainWindow.setWindowTitle(_translate("MainWindow", "Track Devices", None))
+        self.data_list_label.setText(_translate("MainWindow", "Tracking Data:", None))
+
+    def fileMenuOptions(self, menubar):
+        ''' Add options to the file menu'''
+
+        fileMenu = menubar.addMenu('&File')
+
+        exitAction = QtGui.QAction(QtGui.QIcon('exit.png'), '&Exit', self)
+        exitAction.setShortcut('Ctrl+Q')
+        exitAction.setStatusTip('Exit application')
+        exitAction.triggered.connect(QtGui.qApp.quit)
+
+        fileMenu.addAction(exitAction)
+
+    def devMenuOptions(self, menubar):
+        ''' Add options to the devices menu'''
+
+        devicesMenu = menubar.addMenu('&Devices')
+
+        # Add device menu option
+        addDevice = QtGui.QAction(QtGui.QIcon('exit.png'), '&Add Device', self) # Change icon !
+        addDevice.setShortcut('Ctrl+A')
+        addDevice.setStatusTip('Add a device')
+
+        # Triggering launches add_device wrapper
+        addDevice.triggered.connect(self.addWrapper)
+
+        # Remove device menu option
+        remDevice = QtGui.QAction(QtGui.QIcon('exit.png'), '&Remove Device', self) # Change icon !
+        remDevice.setShortcut('Ctrl+R')
+        remDevice.setStatusTip('Remove a device')
+
+        # Triggering removes the device
+        remDevice.triggered.connect(QtGui.qApp.quit) #Change!
+
+        devicesMenu.addAction(addDevice)
+        devicesMenu.addAction(remDevice)
+
+    def addWrapper(self):
+        ''' Add and read a device '''
+
+        # Prompt user then poll system
+        QtGui.QMessageBox.question(self, 'Message', "Ensure the device is disconnected", QtGui.QMessageBox.Ok)
+        guids = self.tracking.getDeviceIDs()
+        QtGui.QMessageBox.question(self, 'Message', "Please connect the device", QtGui.QMessageBox.Ok)
+
+        # Handle errors
+        ret = self.tracking.connect(1, guids)
+        if(self.errorHandler(ret) == -1):
+            return
+
+        QtGui.QMessageBox.question(self, 'Success', "Found device!", QtGui.QMessageBox.Ok)
+
+        # Begin threaded read of device
+        self.get_thread = getDataThread(self.tracking)
+        self.connect(self.get_thread, QtCore.SIGNAL("get_tracked_data(QString)"), self.update_Data)
+        self.get_thread.start()
+
+    def update_Data(self, data):
+        ''' Post data to GUI '''
+
+        self.data_list.insertItem(0, data)
 
     def errorHandler(self, ret):
+        ''' Handle device attachment errors on frontend '''
+
         if(ret == -1):
             QtGui.QMessageBox.question(self, 'Error', "Multiple devices detected!", QtGui.QMessageBox.Ok)
             return -1
@@ -48,80 +153,47 @@ class MainWindow(QtGui.QMainWindow):
             QtGui.QMessageBox.question(self, 'Error', "Vendor/Product ID Mismatch!", QtGui.QMessageBox.Ok)
             return -1
 
-    def addWrapper(self):
-        QtGui.QMessageBox.question(self, 'Message', "Ensure the device is disconnected", QtGui.QMessageBox.Ok)
-        guids = self.tracking.getDeviceIDs()
-        QtGui.QMessageBox.question(self, 'Message', "Please connect the device", QtGui.QMessageBox.Ok)
 
-        ret = self.tracking.connect(1, guids)
+class getDataThread(QtCore.QThread):
+    ''' Read and display device data via modified PyQt thread'''
 
-        if(self.errorHandler(ret) == -1):
-            return
+    def __init__(self, device):
+        QtCore.QThread.__init__(self)
+        self.device = device
 
-        device = self.tracking.con_devices[self.tracking.index]
+    def __del__(self):
+        self.wait()
 
-        QtGui.QMessageBox.question(self, 'Success', "Found device!", QtGui.QMessageBox.Ok)
+    def run(self):
+        ''' Read the device and update the GUI '''
 
-        dt = MouseData(device.prod_id, self.tracking.index)
-        self.mdi.addSubWindow(dt)
-        self.show()
-        dt.show()
+        self.device.read(gui=1)
+        while(1):
+            if(self.device.movements.empty() is False):
+                data = self.device.get_movement(False, 2)
+                if(data is not None):
+                    self.emit(QtCore.SIGNAL('get_tracked_data(QString)'), str(data))
 
+try:
+    _fromUtf8 = QtCore.QString.fromUtf8
+except AttributeError:
+    def _fromUtf8(s):
+        return s
 
-class EmittingStream(QtCore.QObject):
-    textWritten = QtCore.pyqtSignal(str)
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
 
-    def write(self, text):
-        self.textWritten.emit(str(text))
+def main():
+    app = QtGui.QApplication(sys.argv)
+    mw = Ui_MainWindow()
 
-class MouseData(QtGui.QMdiSubWindow):
-    ''' Sub window for individual mouse data '''
+    # Start the event loop
+    sys.exit(app.exec_())
 
-    def __init__(self, prod_id, index):
-        super(MouseData, self).__init__()
-        self.initUI(prod_id, index)
-
-    def initUI(self, prod_id, index):
-        self.setWindowTitle("Device " + str(index + 1) +": " + str(prod_id))
-        self.setWidget(QtGui.QTextEdit())
-        self.show()
-
-def fileMenuOptions(main_window, menubar):
-    ''' Add options to the file menu'''
-
-    fileMenu = menubar.addMenu('&File')
-
-    exitAction = QtGui.QAction(QtGui.QIcon('exit.png'), '&Exit', main_window)
-    exitAction.setShortcut('Ctrl+Q')
-    exitAction.setStatusTip('Exit application')
-    exitAction.triggered.connect(QtGui.qApp.quit)
-
-    fileMenu.addAction(exitAction)
-
-def devMenuOptions(main_window, menubar):
-    ''' Add options to the devices menu'''
-
-    devicesMenu = menubar.addMenu('&Devices')
-
-    addDevice = QtGui.QAction(QtGui.QIcon('exit.png'), '&Add Device', main_window)
-    addDevice.setShortcut('Ctrl+A')
-    addDevice.setStatusTip('Add a device')
-
-    # Triggering launches add_device wrapper
-    addDevice.triggered.connect(main_window.addWrapper)  # Change!
-
-    # remDevice = QtGui.QAction(QtGui.QIcon('exit.png'), '&Remove Device', main_window)
-    # remDevice.setShortcut('Ctrl+R')
-    # remDevice.setStatusTip('Remove a device')
-    # remDevice.triggered.connect(QtGui.qApp.quit) #Change!
-
-    devicesMenu.addAction(addDevice)
-    # devicesMenu.addAction(remDevice)
-#    def normalOutputWritten(self, text):
-#        """Append text to the QTextEdit."""
-#        # Maybe QTextEdit.append() works as well, but this is how I do it:
-#       cursor = self.te.textCursor()
-#        cursor.movePosition(QtGui.QTextCursor.End)
-#        cursor.insertText(text)
-#       self.te.setTextCursor(cursor)
-#        self.te.ensureCursorVisible()
+if __name__ == '__main__':
+    main()

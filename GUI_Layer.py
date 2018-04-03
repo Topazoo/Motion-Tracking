@@ -46,10 +46,10 @@ class Ui_MainWindow(QtGui.QMainWindow):
         ''' Build the menubar '''
 
         self.statusBar()
-        menubar = self.menuBar()
+        self.menubar = self.menuBar()
 
-        self.fileMenuOptions(menubar)
-        self.devMenuOptions(menubar)
+        self.fileMenuOptions(self.menubar)
+        self.devMenuOptions(self.menubar)
 
     def add_central_widget(self, MainWindow):
         ''' Build the central widget '''
@@ -72,6 +72,19 @@ class Ui_MainWindow(QtGui.QMainWindow):
         self.data_list.setBatchSize(1)
         self.data_list.setObjectName(_fromUtf8("data_list"))
         self.verticalLayout.addWidget(self.data_list)
+
+        # Build widget for stop button
+        self.stop_button = QtGui.QPushButton("Stop")
+        self.stop_button.setEnabled(False)
+        self.stop_button.clicked.connect(self.stop_read)
+        self.verticalLayout.addWidget(self.stop_button)
+
+    def stop_read(self):
+        ''' Stop reading a device '''
+
+        QtGui.QMessageBox.question(self, 'Success', "Read stopped", QtGui.QMessageBox.Ok)
+        self.stop_button.setEnabled(False)
+        self.tracking.event.clear()
 
     def translate_UI(self, MainWindow):
         ''' Label to connect slots '''
@@ -97,23 +110,24 @@ class Ui_MainWindow(QtGui.QMainWindow):
         devicesMenu = menubar.addMenu('&Devices')
 
         # Add device menu option
-        addDevice = QtGui.QAction(QtGui.QIcon('exit.png'), '&Add Device', self) # Change icon !
-        addDevice.setShortcut('Ctrl+A')
-        addDevice.setStatusTip('Add a device')
+        self.addDevice = QtGui.QAction(QtGui.QIcon('exit.png'), '&Add Device', self) # Change icon !
+        self.addDevice.setShortcut('Ctrl+A')
+        self.addDevice.setStatusTip('Add a device')
 
         # Triggering launches add_device wrapper
-        addDevice.triggered.connect(self.addWrapper)
+        self.addDevice.triggered.connect(self.addWrapper)
 
         # Remove device menu option
-        remDevice = QtGui.QAction(QtGui.QIcon('exit.png'), '&Remove Device', self) # Change icon !
-        remDevice.setShortcut('Ctrl+R')
-        remDevice.setStatusTip('Remove a device')
+        self.remDevice = QtGui.QAction(QtGui.QIcon('exit.png'), '&Remove Device', self) # Change icon !
+        self.remDevice.setShortcut('Ctrl+R')
+        self.remDevice.setStatusTip('Remove a device')
+        self.remDevice.setEnabled(False)
 
         # Triggering removes the device
-        remDevice.triggered.connect(QtGui.qApp.quit) #Change!
+        self.remDevice.triggered.connect(self.removeWrapper)
 
-        devicesMenu.addAction(addDevice)
-        devicesMenu.addAction(remDevice)
+        devicesMenu.addAction(self.addDevice)
+        devicesMenu.addAction(self.remDevice)
 
     def addWrapper(self):
         ''' Add and read a device '''
@@ -129,11 +143,25 @@ class Ui_MainWindow(QtGui.QMainWindow):
             return
 
         QtGui.QMessageBox.question(self, 'Success', "Found device!", QtGui.QMessageBox.Ok)
+        self.stop_button.setEnabled(True)
+        self.remDevice.setEnabled(True)
+        self.addDevice.setEnabled(False)
 
         # Begin threaded read of device
         self.get_thread = getDataThread(self.tracking)
         self.connect(self.get_thread, QtCore.SIGNAL("get_tracked_data(QString)"), self.update_Data)
         self.get_thread.start()
+
+    def removeWrapper(self):
+        ''' Remove a device '''
+
+        if(self.tracking.event.isSet()):
+            self.stop_read()
+
+        self.tracking.disconnect()
+        self.remDevice.setEnabled(False)
+        self.addDevice.setEnabled(True)
+        QtGui.QMessageBox.question(self, 'Success', "Device disconnected!", QtGui.QMessageBox.Ok)
 
     def update_Data(self, data):
         ''' Post data to GUI '''
@@ -169,10 +197,13 @@ class getDataThread(QtCore.QThread):
 
         self.device.read(gui=1)
         while(1):
-            if(self.device.movements.empty() is False):
-                data = self.device.get_movement(False, 2)
-                if(data is not None):
-                    self.emit(QtCore.SIGNAL('get_tracked_data(QString)'), str(data))
+            try:
+                if(self.device.movements.empty() is False):
+                    data = self.device.get_movement(False, 2)
+                    if(data is not None):
+                        self.emit(QtCore.SIGNAL('get_tracked_data(QString)'), str(data))
+            except:
+                continue
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8

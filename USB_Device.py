@@ -182,6 +182,7 @@ class USB_Mouse(object):
         self.interface = 0  # Device constant
 
         self.movements = Queue.Queue()  # Recorded movements
+        self.event = Event()            # Shared variable to synchronize threads
 
     def connect(self, gui=0, guids=[[], []]):
         ''' Take control of the device and read data '''
@@ -347,13 +348,12 @@ class USB_Mouse(object):
 
         threads = []
 
-        # Shared variable to synchronize threads
-        event = Event()
-        event.set()
+        # Synchronize with event
+        self.event.set()
 
         # Start and store all threads
         for device in devices:
-            thread = Thread(target=device.read_thread_loop, args=(event,))
+            thread = Thread(target=device.read_thread_loop, args=(self.event,))
             # If sync is false, kill on program exit
             if(sync is False):
                 thread.daemon = True
@@ -379,7 +379,7 @@ class USB_Mouse(object):
 
             except KeyboardInterrupt:
                 print("Read interrupted by user. Exiting.")
-                event.clear()
+                self.event.clear()
                 [thread.join() for thread in threads]
 
     # Thanks to: https://stackoverflow.com/questions/11436502/closing-all-threads-with-a-keyboard-interrupt

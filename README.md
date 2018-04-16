@@ -35,8 +35,6 @@ Returns -1 on failure.
 
 	device.read(devices=None)
 
-	device.read(sync=True)
-
 	device.read(label=False)
 
 	device.read(verbosity=2)
@@ -47,9 +45,6 @@ Returns -1 on failure.
 
 Parameters:
 * [devices]: A list of USB_Mouse objects connected to physical devices to read.
-* sync: Prints data continuously or runs read() in the background
-	* True - Default. Data is read and printed until interrupted with CTRL-C.
-	* False - Data is read in the background.
 * label: labels the data with the device it was read from.
 	* False - Default. Data is unlabeled.
 	* True - Data is labeled.
@@ -61,8 +56,6 @@ Parameters:
 ### All Devices:
 ```
 	device.read_all()
-
-	device.read_all(sync=True)
 
 	device.read_all(label=True)
 
@@ -77,9 +70,6 @@ Parameters:
 * label: labels the data with the device it was read from.
 	* False - Data is unlabeled.
 	* True - Default. Data is labeled.
-* sync: Prints data continuously or runs read() in the background
-	* True - Default. Data is read and printed until interrupted with CTRL-C.
-	* False - Data is read in the background.
 * verbosity: how the data is represented.
 	* 0 - None.
 	* 1 - Raw. Eight element list of movements.

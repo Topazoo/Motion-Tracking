@@ -334,7 +334,21 @@ class USB_Mouse(object):
                 event.clear()
                 return
 
-    def read(self, devices=None, sync=True, label=False, verbosity=2, gui=0):
+    def print_thread_loop(self, devices, label, verbosity, event):
+        ''' Thread to print readings from devices'''
+
+        while (event.is_set()):
+            movements = []
+            for device in devices:
+                if (device.movements.empty() is False):
+                    movement = device.get_movement(label, verbosity)
+                    if (movement is not None):
+                        movements.append(movement)
+
+            if (len(movements) > 0):
+                print movements
+
+    def read(self, devices=None, label=False, verbosity=2, gui=0):
         ''' Read one or more devices concurrently. If the label flag is set,
             the data read will be labeled by device'''
 
@@ -354,40 +368,32 @@ class USB_Mouse(object):
         # Start and store all threads
         for device in devices:
             thread = Thread(target=device.read_thread_loop, args=(self.event,))
-            # If sync is false, kill on program exit
-            if(sync is False):
-                thread.daemon = True
             threads.append(thread)
             thread.start()
 
-        if(sync is True):
-            # Synchronized thread kill on keyboard interrupt (CTRL+C)
-            try:
-                while(1):
-                    if(gui == 1):
-                        break
+        # Print if verbosity is greater than 0
+        if(verbosity > 0):
+            print_thread = Thread(target=device.print_thread_loop, args=(devices, label, verbosity, self.event,))
+            threads.append(print_thread)
+            print_thread.start()
 
-                    movements = []
-                    for device in devices:
-                        if(device.movements.empty() is False):
-                            movement = device.get_movement(label, verbosity)
-                            if(movement is not None):
-                                movements.append(movement)
+        # Synchronized thread kill on keyboard interrupt (CTRL+C)
+        try:
+            while(1):
+                if(gui == 1):
+                    break
 
-                    if(len(movements) > 0):
-                        print movements
-
-            except KeyboardInterrupt:
-                print("Read interrupted by user. Exiting.")
-                self.event.clear()
-                [thread.join() for thread in threads]
+        except KeyboardInterrupt:
+            print("Read interrupted by user. Exiting.")
+            self.event.clear()
+            [thread.join() for thread in threads]
 
     # Thanks to: https://stackoverflow.com/questions/11436502/closing-all-threads-with-a-keyboard-interrupt
 
-    def read_all(self, sync=True , label=True, verbosity=2):
+    def read_all(self, label=True, verbosity=2):
         ''' Read all connected devices concurrently '''
 
-        self.read(self.get_devices(), sync, label, verbosity)
+        self.read(self.get_devices(), label, verbosity)
 
     def disconnect(self):
         ''' Release the device to the kernel '''

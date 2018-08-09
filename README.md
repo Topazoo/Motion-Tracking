@@ -1,8 +1,8 @@
 # Class to Read Concurrent Optical Mouse Movements
 
 ## Overview:
-The USB_Mouse class allows the the user to read data from a
-physically attached USB mouse.
+The USB_Mouse class allows the the user to read data from
+physically attached USB mice.
 
 ## Requirements:
 ###	Python 2.7:
